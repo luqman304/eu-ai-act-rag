@@ -52,6 +52,7 @@ try { $("tok").value = localStorage.getItem("aiact-token") || ""; } catch (_) {}
 $("f").addEventListener("submit", async (e) => {
   e.preventDefault();
   const question = $("q").value.trim(); if (!question) return;
+  try { history.replaceState(null, "", "?q=" + encodeURIComponent(question)); } catch (_) {}
   $("go").disabled = true; $("out").innerHTML = '<p class="meta">Retrieving and answering…</p>';
   const headers = {"content-type": "application/json"};
   const tok = $("tok").value.trim();
@@ -75,6 +76,8 @@ $("f").addEventListener("submit", async (e) => {
     $("out").innerHTML = `<p class="err">${esc(String(err.message || err))}</p>`;
   } finally { $("go").disabled = false; }
 });
+const shared = new URLSearchParams(location.search).get("q");
+if (shared) { $("q").value = shared; $("f").requestSubmit(); }
 </script>
 </body>
 </html>

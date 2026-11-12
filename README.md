@@ -17,22 +17,46 @@ decision was worth, with confidence intervals.
 
 ---
 
+## Demo
+
+The screenshots below are from the running app (`docker compose up`, then http://localhost:8000).
+
+**A real question, answered with citations.** Every sentence cites a numbered excerpt; the excerpts link to the
+exact article on EUR-Lex. The footer shows the retrieval configuration, model and end-to-end latency.
+
+![Answering whether AI used to screen job applications is high-risk, citing Article 6 and Annex III](docs/screenshots/ask-high-risk.png)
+
+**An out-of-scope question, declined.** GDPR fines are not in the AI Act, so the model says so (structured output
+`answerable: false`, amber border) instead of answering from memory.
+
+![Declining a GDPR question because the excerpts come from the AI Act](docs/screenshots/ask-out-of-scope.png)
+
+**The HTTP API** with interactive OpenAPI docs at `/docs`.
+
+![OpenAPI docs listing /v1/ask, /v1/search, /v1/provisions and /readyz](docs/screenshots/api-docs.png)
+
+Any question can be shared as a link: `http://localhost:8000/?q=Which%20AI%20practices%20are%20prohibited%3F`
+opens the app and asks it.
+
+---
+
 ## Contents
 
-1. [Headline results](#headline-results)
-2. [Architecture](#architecture)
-3. [Design decisions](#design-decisions)
-4. [Evaluation methodology](#evaluation-methodology)
-5. [Full results](#full-results)
-6. [Quick start](#quick-start)
-7. [API reference](#api-reference)
-8. [CLI reference](#cli-reference)
-9. [Configuration](#configuration)
-10. [Reproducing the evaluation](#reproducing-the-evaluation)
-11. [Testing and CI](#testing-and-ci)
-12. [Project layout](#project-layout)
-13. [Limitations](#limitations)
-14. [Next steps](#next-steps)
+1. [Demo](#demo)
+2. [Headline results](#headline-results)
+3. [Architecture](#architecture)
+4. [Design decisions](#design-decisions)
+5. [Evaluation methodology](#evaluation-methodology)
+6. [Full results](#full-results)
+7. [Quick start](#quick-start)
+8. [API reference](#api-reference)
+9. [CLI reference](#cli-reference)
+10. [Configuration](#configuration)
+11. [Reproducing the evaluation](#reproducing-the-evaluation)
+12. [Testing and CI](#testing-and-ci)
+13. [Project layout](#project-layout)
+14. [Limitations](#limitations)
+15. [Next steps](#next-steps)
 
 ---
 
