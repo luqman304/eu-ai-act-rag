@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Act Q&amp;A</title>
+<style>
+  :root { --bg:#fbfaf7; --fg:#1d1d1f; --muted:#6b6b70; --line:#e4e2dc; --card:#fff; --accent:#1f4fd1; --warn:#9a5b00; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151517; --fg:#ececee; --muted:#9a9aa1; --line:#2c2c30; --card:#1d1d20; --accent:#8fb0ff; --warn:#e2b45c; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.35rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: .92rem; }
+  form { display:flex; gap:8px; }
+  textarea { flex:1; resize:vertical; min-height:52px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--fg); font:inherit; }
+  button { padding: 0 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:progress; }
+  details.opts { margin:10px 0 0; color:var(--muted); font-size:.88rem; }
+  details.opts label { margin-right:14px; }
+  .answer { margin-top:28px; padding:20px; background:var(--card); border:1px solid var(--line); border-radius:12px; white-space:pre-wrap; }
+  .answer.na { border-color: var(--warn); }
+  .cite { color:var(--accent); text-decoration:none; font-weight:600; font-size:.85em; }
+  h2 { font-size: .95rem; margin: 28px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  ol.ctx { padding-left: 20px; } ol.ctx li { margin-bottom: 10px; }
+  ol.ctx a { color: var(--fg); font-weight:600; }
+  ol.ctx p { margin: 4px 0 0; color: var(--muted); font-size:.88rem; }
+  .meta { margin-top:10px; color:var(--muted); font-size:.8rem; }
+  .err { color:#c0392b; margin-top:16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>EU AI Act Q&amp;A</h1>
+  <p class="sub">Answers grounded in Regulation (EU) 2024/1689, with citations to the official text. Not legal advice.</p>
+  <form id="f">
+    <textarea id="q" placeholder="e.g. Is AI used to screen job applications high-risk?" required></textarea>
+    <button id="go">Ask</button>
+  </form>
+  <details class="opts"><summary>Options</summary>
+    <label><input type="checkbox" id="rerank"> rerank (slower)</label>
+    <label><input type="checkbox" id="recitals"> search recitals</label>
+    <label>k <input type="number" id="k" value="6" min="1" max="20" style="width:3.5em"></label>
+    <label>API token <input type="password" id="tok" style="width:10em"></label>
+  </details>
+  <div id="out"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+try { $("tok").value = localStorage.getItem("aiact-token") || ""; } catch (_) {}
+$("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const question = $("q").value.trim(); if (!question) return;
+  $("go").disabled = true; $("out").innerHTML = '<p class="meta">Retrieving and answering…</p>';
+  const headers = {"content-type": "application/json"};
+  const tok = $("tok").value.trim();
+  if (tok) { headers.authorization = "Bearer " + tok; try { localStorage.setItem("aiact-token", tok); } catch (_) {} }
+  try {
+    const r = await fetch("/v1/ask", {method: "POST", headers, body: JSON.stringify({
+      question, rerank: $("rerank").checked, recitals: $("recitals").checked, k: +$("k").value })});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail ? JSON.stringify(d.detail) : r.statusText);
+    const byN = Object.fromEntries(d.citations.map((c) => [c.n, c]));
+    const body = esc(d.answer).replace(/\[(\d{1,2})\]/g, (m, n) =>
+      byN[n] ? `<a class="cite" href="${byN[n].url}" target="_blank" rel="noopener" title="${esc(byN[n].label)}">[${n}]</a>` : m);
+    const ctx = d.contexts.map((c) => {
+      const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=OJ:L_202401689#${c.unit_ids[0] || ""}`;
+      return `<li><a href="${url}" target="_blank" rel="noopener">${esc(c.label)}</a><p>${esc(c.text.split("\n").slice(-1)[0].slice(0, 220))}…</p></li>`;
+    }).join("");
+    $("out").innerHTML = `<div class="answer ${d.answerable ? "" : "na"}">${body}</div>
+      <div class="meta">${esc(d.config)} · ${esc(d.model)} · ${Math.round(Object.values(d.timings_ms).reduce((a, b) => a + b, 0))} ms</div>
+      <h2>Retrieved excerpts</h2><ol class="ctx">${ctx}</ol>`;
+  } catch (err) {
+    $("out").innerHTML = `<p class="err">${esc(String(err.message || err))}</p>`;
+  } finally { $("go").disabled = false; }
+});
+</script>
+</body>
+</html>
